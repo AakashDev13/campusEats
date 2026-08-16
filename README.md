@@ -1,3 +1,13 @@
+# Team Members 
+# Aakash - 20252651001 (Leader)
+# sahil kumar - 20252651044
+# sonu jha - 20252651056
+# vedansh rahguwanshi - 20252651062
+# sanu singh - 20252651050 
+
+
+
+
 # CampusEats
 
 CampusEats is a campus food ordering and management system.
