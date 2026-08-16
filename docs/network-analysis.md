@@ -2,7 +2,7 @@
 
 ## Website
 
-Website analyzed: [your website]
+Website analyzed: https://jsonplaceholder.typicode.com
 
 ## Conditions
 
@@ -13,21 +13,21 @@ Website analyzed: [your website]
 
 ## Results
 
-- Request count: XX
-- Total transferred: XX MB
-- Total resources: XX MB
-- Page load time: XX seconds
+- Request count: 07
+- Total transferred: 26.34 (app)MB
+- Total resources: 7 MB
+- Page load time: 4 seconds
 
 ## Slowest Resource
 
-- Resource: XXXXX
-- Type: XXXXX
-- Duration: XXXXX ms
+- Resource: 7
+- Type: json
+- Duration: 8 ms
 
-## 3xx / 4xx Responses
+## 200 / 404 Responses
 
-- XXXXX — XXXXX
-- XXXXX — XXXXX
+- 200 — 6
+- 404 — 1
 
 ## Observations
 

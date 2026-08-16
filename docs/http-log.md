@@ -44,7 +44,7 @@ alt-svc: h3=":443"; ma=86400
 
 ---
 
-# Step 6 — Request 2
+# Request 2
 
 Run:
 
@@ -89,7 +89,7 @@ alt-svc: h3=":443"; ma=86400
 
 ---
 
-# Step 7 — Request 3
+# Request 3
 
 Run:
 
@@ -146,6 +146,7 @@ alt-svc: h3=":443"; ma=86400
   }
 }
 
+# Request 4
 
 HTTP/2 200 
 date: Sun, 16 Aug 2026 13:00:50 GMT
@@ -197,7 +198,8 @@ alt-svc: h3=":443"; ma=86400
   }
 }
 
-// curl -i https://jsonplaceholder.typicode.com/users/1
+# curl -i https://jsonplaceholder.typicode.com/users/1
+# Request 5 
 
 HTTP/2 200 
 date: Sun, 16 Aug 2026 13:02:09 GMT
@@ -249,8 +251,8 @@ alt-svc: h3=":443"; ma=86400
   }
 }
 
-// curl -i https://jsonplaceholder.typicode.com/todos/1
-
+#curl -i https://jsonplaceholder.typicode.com/todos/1
+# Request 6
 
 
 HTTP/2 200 
@@ -288,7 +290,9 @@ alt-svc: h3=":443"; ma=86400
 
 
 
-// curl -i https://jsonplaceholder.typicode.com/posts/999999
+# curl -i https://jsonplaceholder.typicode.com/posts/999999
+# Request 7
+
 
 server: cloudflare
 vary: Origin, Accept-Encoding
@@ -311,8 +315,8 @@ alt-svc: h3=":443"; ma=86400
   "completed": false
 }
 
-HTTP/2 404
-content-type: application/json; charset=utf-8
+#HTTP/2 404
+#content-type: application/json; charset=utf-8
 ...
 
 HTTP/2 404. -------> 404 respose 
