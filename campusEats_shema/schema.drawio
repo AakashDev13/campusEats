@@ -1,0 +1,53 @@
+<mxfile host="app.diagrams.net" modified="2026-08-16T12:00:00.000Z" agent="CampusEats Design Benchmark" version="24.7.17">
+<diagram id="schema" name="Schema"><mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1169" pageHeight="827"><root>
+<mxCell id="0"/><mxCell id="1" parent="0"/>
+<mxCell id="users" value="IDENTITY SERVICE
+users
+PK user_id : BIGINT
+full_name : VARCHAR(120)
+email : VARCHAR(255) UNIQUE
+password_hash : VARCHAR(255)
+role : VARCHAR(30)
+created_at : TIMESTAMP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1"><mxGeometry x="20" y="40" width="250" height="210" as="geometry"/></mxCell>
+<mxCell id="sessions" value="IDENTITY SERVICE
+auth_sessions
+PK session_id : BIGINT
+FK user_id : BIGINT
+token_hash : VARCHAR(255) UNIQUE
+expires_at : TIMESTAMP
+created_at : TIMESTAMP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1"><mxGeometry x="20" y="300" width="250" height="170" as="geometry"/></mxCell>
+<mxCell id="items" value="CATALOGUE SERVICE
+food_items
+PK item_id : BIGINT
+name : VARCHAR(150)
+description : VARCHAR(500)
+price : DECIMAL(10,2)
+category : VARCHAR(80)
+available : BOOLEAN
+created_at : TIMESTAMP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1"><mxGeometry x="340" y="40" width="280" height="230" as="geometry"/></mxCell>
+<mxCell id="orders" value="ORDER SERVICE
+orders
+PK order_id : BIGINT
+user_id : BIGINT (external)
+status : VARCHAR(30)
+total_amount : DECIMAL(10,2)
+created_at : TIMESTAMP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" parent="1" vertex="1"><mxGeometry x="340" y="330" width="280" height="180" as="geometry"/></mxCell>
+<mxCell id="orderitems" value="ORDER SERVICE
+order_items
+PK order_item_id : BIGINT
+FK order_id : BIGINT
+item_id : BIGINT (external)
+item_name_snapshot : VARCHAR(150)
+unit_price_snapshot : DECIMAL(10,2)
+quantity : INT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" parent="1" vertex="1"><mxGeometry x="690" y="320" width="310" height="210" as="geometry"/></mxCell>
+<mxCell id="payments" value="PAYMENT SERVICE
+payments
+PK payment_id : BIGINT
+order_id : BIGINT (external)
+amount : DECIMAL(10,2)
+status : VARCHAR(30)
+provider_reference : VARCHAR(255)
+created_at : TIMESTAMP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1"><mxGeometry x="690" y="40" width="310" height="200" as="geometry"/></mxCell>
+<mxCell id="r1" edge="1" parent="1" source="users" target="sessions" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=ERone;endFill=0;"><mxGeometry relative="1" as="geometry"/>><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="r2" edge="1" parent="1" source="orders" target="orderitems" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=ERone;endFill=0;"><mxGeometry relative="1" as="geometry"/>><mxGeometry relative="1" as="geometry"/></mxCell>
+</root></mxGraphModel></diagram></mxfile>
