@@ -17,13 +17,13 @@ The main users of CampusEats are:
 
 The main nouns/entities in the system are:
 
-- Student
-- Vendor
+- Students
+- Vendors
 - Restaurant
 - Menu
 - Food Item
-- Cart
-- Order
+- Carts
+- Orders
 - Order Item
 - Payment
 - Delivery
