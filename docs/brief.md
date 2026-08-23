@@ -2,7 +2,7 @@
 
 ## What
 
-CampusEats is a campus food ordering system that connects students with campus food vendors. Students can browse available food, place orders, make payments, and track their orders. Vendors can manage their menus and process incoming orders.
+CampusEats is a campus food and best ordering system that connects students with campus food vendors. Students can browse available food, place orders, make payments, and track their orders. Vendors can manage their menus and process incoming orders.
 
 ## Who
 
