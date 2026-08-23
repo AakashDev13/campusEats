@@ -46,7 +46,7 @@ The main actions in the system are:
 - Track
 - Review
 - Update
-- Manage
+- Managef
 
 ## Example Interactions
 
