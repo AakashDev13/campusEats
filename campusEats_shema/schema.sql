@@ -31,7 +31,7 @@ CREATE TABLE food_items (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Order Service (Member C)
+-- Order Service member c
 CREATE TABLE orders (
     order_id BIGINT PRIMARY KEY,
     user_id BIGINT NOT NULL,
