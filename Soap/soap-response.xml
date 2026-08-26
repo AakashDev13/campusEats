@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope
+    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:pay="http://campuspay.example.com/payment/v1">
+    <soap:Header/>
+    <soap:Body>
+        <pay:ChargeResponse>
+            <pay:status>APPROVED</pay:status>
+            <pay:providerReference>CP-20260826-100045-8F21</pay:providerReference>
+            <pay:authorizedAmount>249.00</pay:authorizedAmount>
+            <pay:currency>INR</pay:currency>
+        </pay:ChargeResponse>
+    </soap:Body>
+</soap:Envelope>
