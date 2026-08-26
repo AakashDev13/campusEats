@@ -6,7 +6,7 @@ Website analyzed: https://jsonplaceholder.typicode.com
 
 ## Conditions
 
-- Browser: Google Chrome
+- Browser: Google Chrome/safari
 - DevTools: Network panel
 - Disable cache: Enabled
 - Page was reloaded after enabling Disable cache
