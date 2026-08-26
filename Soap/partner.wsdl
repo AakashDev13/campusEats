@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://campuspay.example.com/payment/v1"
+    targetNamespace="http://campuspay.example.com/payment/v1"
+    name="CampusPayPaymentService">
+
+    <wsdl:types>
+        <xsd:schema
+            targetNamespace="http://campuspay.example.com/payment/v1"
+            elementFormDefault="qualified">
+
+            <xsd:element name="ChargeRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="merchantId" type="xsd:string"/>
+                        <xsd:element name="orderId" type="xsd:long"/>
+                        <xsd:element name="amount" type="xsd:decimal"/>
+                        <xsd:element name="currency" type="xsd:string"/>
+                        <xsd:element name="cardToken" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="ChargeResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="status" type="xsd:string"/>
+                        <xsd:element name="providerReference" type="xsd:string"/>
+                        <xsd:element name="authorizedAmount" type="xsd:decimal"/>
+                        <xsd:element name="currency" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="Credentials">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="clientId" type="xsd:string"/>
+                        <xsd:element name="clientSecret" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="PaymentFault">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="code" type="xsd:string"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                        <xsd:element name="providerReference" type="xsd:string" minOccurs="0"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </wsdl:types>
+
+    <wsdl:message name="ChargeRequestMessage">
+        <wsdl:part name="parameters" element="tns:ChargeRequest"/>
+    </wsdl:message>
+
+    <wsdl:message name="ChargeResponseMessage">
+        <wsdl:part name="parameters" element="tns:ChargeResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="CredentialsHeaderMessage">
+        <wsdl:part name="credentials" element="tns:Credentials"/>
+    </wsdl:message>
+
+    <wsdl:message name="PaymentFaultMessage">
+        <wsdl:part name="fault" element="tns:PaymentFault"/>
+    </wsdl:message>
+
+    <wsdl:portType name="PaymentPortType">
+        <wsdl:operation name="charge">
+            <wsdl:documentation>
+                Authorizes and captures a payment for a CampusEats order.
+            </wsdl:documentation>
+            <wsdl:input message="tns:ChargeRequestMessage"/>
+            <wsdl:output message="tns:ChargeResponseMessage"/>
+            <wsdl:fault name="PaymentFault" message="tns:PaymentFaultMessage"/>
+        </wsdl:operation>
+    </wsdl:portType>
+
+    <wsdl:binding name="PaymentSoapBinding" type="tns:PaymentPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="charge">
+            <soap:operation soapAction="http://campuspay.example.com/payment/v1/charge" style="document"/>
+            <wsdl:input>
+                <soap:header message="tns:CredentialsHeaderMessage"
+                            part="credentials"
+                            use="literal"/>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="PaymentFault">
+                <soap:fault name="PaymentFault" use="literal"/>
+            </wsdl:fault>
+        </wsdl:operation>
+    </wsdl:binding>
+
+    <wsdl:service name="CampusPayPaymentService">
+        <wsdl:documentation>
+            External payment partner used by CampusEats.
+        </wsdl:documentation>
+        <wsdl:port name="PaymentSoapPort" binding="tns:PaymentSoapBinding">
+            <soap:address location="https://payments.campuspay.example.com/soap/PaymentService"/>
+        </wsdl:port>
+    </wsdl:service>
+
+</wsdl:definitions>
