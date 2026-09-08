@@ -1,13 +1,10 @@
-# Team Members 
+# Team Members
 
- - Aakash - 20252651001 (Leader)
- - sahil kumar - 20252651044
- - sonu jha - 20252651056
- - vedansh rahguwanshi - 20252651062
- - shanu singh - 20252651050 
-
-
-
+- Aakash - 20252651001 (Leader)
+- sahil kumar - 20252651044
+- sonu jha - 20252651056
+- vedansh rahguwanshi - 20252651062
+- shanu singh - 20252651050
 
 # CampusEats
 
@@ -29,3 +26,24 @@ This project demonstrates:
 - `http-log.md` — HTTP request/response experiments
 - `network-analysis.md` — Browser Network panel analysis
 - `brief.md` — CampusEats system brief
+
+
+
+# CampusEats Orders REST Service
+
+Sibling service folder for the CampusEats REST assignment. The service implements Orders using resources, OpenAPI, HTTP status codes, a single problem error shape, idempotent order creation, and a hardened outbound Payments call.
+
+
+
+## Run
+
+export PAYMENTS_URL=http://localhost:9000
+python app.py
+
+## Tests
+
+pytest -q
+
+## Contract validation
+
+openapi-spec-validator openapi.yaml
