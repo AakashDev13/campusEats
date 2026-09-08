@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope
+    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:pay="http://campuspay.example.com/payment/v1">
+    <soap:Header/>
+    <soap:Body>
+        <soap:Fault>
+            <faultcode>soap:Client</faultcode>
+            <faultstring>Payment was declined by the issuer.</faultstring>
+            <detail>
+                <pay:PaymentFault>
+                    <pay:code>CARD_DECLINED</pay:code>
+                    <pay:message>The payment instrument was declined.</pay:message>
+                    <pay:providerReference>CP-20260826-100045-DECL</pay:providerReference>
+                </pay:PaymentFault>
+            </detail>
+        </soap:Fault>
+    </soap:Body>
+</soap:Envelope>
