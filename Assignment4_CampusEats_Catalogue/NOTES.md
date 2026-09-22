@@ -3,7 +3,7 @@
 ## HTTP Methods & Headers — CampusEats Catalogue
 
 **Team ID:** 08
-**Roll No / Name:** Aakash [20252651001] Sonu Jha [20252651056] Sahil Kumar [20252651044]
+**Roll No / Name:** Aakash [20252651001] Sonu Jha [20252651056] Sahil Kumar [20252651044] Vedansh Raghuwanshi [20252651062] Shanu Singh [20252651050]
  
 **Service:** Catalogue
 
