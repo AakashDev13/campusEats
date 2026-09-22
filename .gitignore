@@ -5,3 +5,7 @@ Assignment4_CampusEats_Catalogue/venv/
 # Python cache
 Assignment4_CampusEats_Catalogue/__pycache__/
 *.pyc
+
+Assignment5_CampusEats_Catalogue/venv/
+Assignment5_CampusEats_Catalogue/__pycache__/
+*.pyc
