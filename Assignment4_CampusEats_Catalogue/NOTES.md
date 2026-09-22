@@ -1,283 +1,715 @@
-# CS543 Web Services — Assignment 4
-## Rebuilding a CampusEats Service in REST
+# CS543 Web Services — Assignment 5
 
-**Team ID:** ____________________  
-**Roll No / Name:** ____________________  
-**Service chosen:** Catalogue  
-**Previous SOAP partner:** CampusPay Payment Gateway
+## HTTP Methods & Headers — CampusEats Catalogue
 
-> Note: This implementation preserves the Assignment 2 boundary: the Catalogue owns menu/food-item data. The Payments service is only an outbound dependency; it does not own the Catalogue store.
+**Team ID:** 08
+**Roll No / Name:** Aakash [20252651001] Sonu Jha [20252651056] Sahil Kumar [20252651044]
+ 
+**Service:** Catalogue
 
-## A2 — Operations that could have been SOAP
+---
 
-Starting from the catalogue-style operations:
+# Part A — HTTP Methods
 
-- addMenuItem(...)
-- getMenuItem(...)
-- getMenu(...)
-- setAvailability(...)
+## A1 — HTTP Method Map
 
-These verbs are used only as the starting point. They do not appear as REST URL verbs.
+| Action              | HTTP Method | URL                                  | Purpose                          |
+| ------------------- | ----------- | ------------------------------------ | -------------------------------- |
+| Create menu item    | POST        | `/menu-items`                        | Creates a new menu item          |
+| List menu items     | GET         | `/menu-items`                        | Reads menu items                 |
+| Get one menu item   | GET         | `/menu-items/{item_id}`              | Reads one menu item              |
+| Replace menu item   | PUT         | `/menu-items/{item_id}`              | Replaces the menu item           |
+| Change availability | POST        | `/menu-items/{item_id}/availability` | Performs the availability action |
 
-## A4 — Resource table
+GET requests are read-only and do not modify server state.
 
-| Method | URL | What it does | Success | Failure |
-|---|---|---|---|---|
-| POST | `/menu-items` | Creates a durable menu item | 201 | 400, 409, 422 |
-| GET | `/menu-items/{item_id}` | Reads one menu item | 200 | 404 |
-| GET | `/menu-items?category=...&available=...` | Filters menu items | 200 | 400 |
-| PATCH | `/menu-items/{item_id}/availability` | Changes availability state | 200 | 400, 404, 409, 422 |
+---
 
-## A5 — Hard mapping choice
+## A2 — Non-CRUD Actions
 
-`setAvailability(...)` mapped least comfortably because the SOAP name describes an action while REST should expose a resource. I treated availability as a state sub-resource, `/menu-items/{id}/availability`, and used `PATCH` because only part of the menu item's state changes. I rejected `/setAvailability` because it keeps the RPC verb in the URL, and I rejected a full replacement `PUT` because the operation changes only one state field.
+The availability operation is an action rather than a complete resource replacement.
 
-# B — OpenAPI
+Instead of using a URL such as:
 
-`openapi.yaml` was written before the Flask handlers. All four endpoints are documented there. Request and response shapes are defined once under `components.schemas` and reused through `$ref`.
+`POST /setAvailability`
 
-Validate with:
+the service uses:
 
-```bash
-openapi-spec-validator openapi.yaml
-```
+`POST /menu-items/{item_id}/availability`
 
-Expected result:
+This keeps the action associated with the menu-item resource and avoids putting an RPC-style verb directly in the URL.
 
-```text
-openapi.yaml: OK
-```
+---
 
-If your installed validator prints no output on success, that is also a successful zero-error result; capture the terminal showing the command followed by the next shell prompt.
+## A3 — Safe and Idempotent Methods
 
-# C — Implementation
+| Endpoint                        | Method | Safe | Idempotent                                        | Reason                                                          |
+| ------------------------------- | ------ | ---- | ------------------------------------------------- | --------------------------------------------------------------- |
+| `/menu-items`                   | GET    | Yes  | Yes                                               | Only reads the collection                                       |
+| `/menu-items/{id}`              | GET    | Yes  | Yes                                               | Only reads one item                                             |
+| `/menu-items`                   | POST   | No   | Application-level retry-safe with Idempotency-Key | Same key returns the original result                            |
+| `/menu-items/{id}`              | PUT    | No   | Yes                                               | Repeating the same replacement produces the same intended state |
+| `/menu-items/{id}/availability` | POST   | No   | Not generally                                     | It represents an action                                         |
 
-## C2 — Record vs representation
+GET requests do not change server state.
 
-`MenuItem` is the stored record. Its `as_json()` method is the published representation. The stored record contains `internal_id`, while `as_json()` deliberately omits it. Therefore an internal identifier does not leak through the API.
+The create operation uses an `Idempotency-Key` to make retries safe against duplicate creation.
 
-## C4 — Manual validation
+---
 
-The specific functions are:
+## A4 — Filtering, Sorting and Pagination
 
-```text
-validate_menu_item()
-validate_availability()
-```
+The collection remains a pure GET request.
 
-They run before request fields are used.
+Examples:
 
-Without `validate_menu_item()`, a body such as:
+`GET /menu-items?category=Fast%20Food`
 
-```json
-{"name": "Dosa"}
-```
+`GET /menu-items?available=true`
 
-could reach the code without the required `category` and `price` fields and cause incorrect processing instead of the specified 400 response.
+`GET /menu-items?sort=price&order=desc`
 
-## C7 — Idempotency
+`GET /menu-items?page=1&limit=10`
 
-`POST /menu-items` requires `Idempotency-Key`. The key is stored with the created record in the in-process store. Repeating the same key returns the original record rather than creating a duplicate.
+The supported query parameters are:
 
-## C8 — Tests
+* `category`
+* `available`
+* `sort`
+* `order`
+* `page`
+* `limit`
 
-The four required behaviours are covered by `tests/test_app.py`:
+These parameters do not change server state.
 
-1. create → 201 and Location
-2. idempotent repeat → original result
-3. malformed body → 400
-4. unknown id → 404
+---
 
-Run:
+## A5 — OPTIONS and Method Override
 
-```bash
-pytest -q
-```
-
-Expected:
-
-```text
-4 passed
-```
-
-# D — Surviving a bad network
-
-## D1/D2 — Outbound call
-
-The code contains a real HTTP POST in `payment_call()`. The destination is read from the environment variable:
-
-```text
-PAYMENTS_URL
-```
-
-There is no hard-coded CampusEats payment URL.
-
-The call uses a 2-second timeout, up to three attempts, exponential backoff and random jitter. HTTP 4xx responses are never retried. The outbound POST carries the same `Idempotency-Key`, so a retried create has a stable key.
+The service implements OPTIONS for the collection and individual menu-item resources.
 
 Example:
 
-```bash
-export PAYMENTS_URL=http://localhost:6000/charge
-```
+`OPTIONS /menu-items`
 
-For normal local testing, leave `PAYMENTS_URL` unset; the code then uses the documented fallback path so the four required tests can run without a second live service.
+returns:
 
-## D3 — Fallback
+`Allow: GET, POST, OPTIONS`
 
-When the required dependency is configured but unreachable, the Catalogue service fails closed with `503 Service Unavailable` rather than pretending the dependent operation succeeded. Degrading would be wrong here because returning success while a required CampusEats dependency is unavailable could leave the caller believing that an operation completed when the dependent side did not.
+Example:
 
-# Answers
+`OPTIONS /menu-items/1`
 
-## 1. WSDL vs OpenAPI line count
+returns:
 
-The Assignment 3 `partner.wsdl` is **114 lines** and this Assignment 4 `openapi.yaml` is **168 lines**, so the OpenAPI file is **54 lines longer** in this submission. The difference is not simply “SOAP is longer.” A WSDL describes SOAP-specific messaging and transport details that a REST/OpenAPI contract can express more directly through HTTP methods, URLs, parameters and HTTP response codes.
+`Allow: GET, PUT, OPTIONS`
 
-Two things declared by the WSDL that the OpenAPI contract does not need in the same SOAP-specific form are:
+For constrained clients that cannot send PUT, the service supports the documented fallback:
 
-1. SOAP message/binding details such as the SOAP-over-HTTP binding and SOAPAction.
-2. WSDL `portType`/`binding`/`service` machinery for exposing an operation through a SOAP endpoint.
+`X-HTTP-Method-Override: PUT`
 
-
-## 2. SOAP Fault → REST problem
-
-Assignment 3's SOAP fault contains the provider-specific `CARD_DECLINED` vocabulary:
-
-```xml
-<soap:Fault>
-    <faultcode>soap:Client</faultcode>
-    <faultstring>Payment was declined by the issuer.</faultstring>
-    <detail>
-        <pay:PaymentFault>
-            <pay:code>CARD_DECLINED</pay:code>
-            <pay:message>The payment instrument was declined.</pay:message>
-            <pay:providerReference>...</pay:providerReference>
-        </pay:PaymentFault>
-    </detail>
-</soap:Fault>
-```
-
-In REST, the equivalent CampusEats error should be represented as an HTTP error status plus the single `problem()` shape, for example:
+Example:
 
 ```http
-HTTP/1.1 422 Unprocessable Entity
+POST /menu-items/1 HTTP/1.1
+Host: 127.0.0.1:5000
+X-HTTP-Method-Override: PUT
+```
+
+The server processes this request as a PUT operation.
+
+---
+
+## A6 — Full HTTP Request and Response
+
+### Request
+
+```http
+POST /menu-items HTTP/1.1
+Host: 127.0.0.1:5000
 Content-Type: application/json
+Accept: application/json
+Authorization: Bearer test-token
+Idempotency-Key: A6-test-001
+
+{
+  "name": "Burger",
+  "category": "Fast Food",
+  "price": 100,
+  "available": true
+}
+```
+
+### Response
+
+```http
+HTTP/1.1 201 CREATED
+Content-Type: application/json
+Location: /menu-items/2
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000
+Access-Control-Allow-Origin: *
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
 ```
 
 ```json
 {
-  "type": "about:blank",
-  "title": "Payment Declined",
-  "status": 422,
-  "detail": "The payment for the CampusEats order was declined."
+  "available": true,
+  "category": "Fast Food",
+  "id": 2,
+  "name": "Burger",
+  "price": 100.0
 }
 ```
 
-Returning this error inside `200 OK` is a problem because an intermediary, HTTP client, proxy or monitoring system uses the HTTP status code to understand whether the request succeeded. A `200` tells that network layer “success”, even if application data contains an error. That can break retries, monitoring, caching and client error handling.
+The request successfully created a menu item and returned `201 Created` with the `Location` header identifying the new resource.
 
-## 3. UDDI publish/find/bind
+---
 
-The three UDDI ideas do not disappear completely, but their implementation changes:
+# Part B — HTTP Headers and Status Codes
 
-- **Publish:** still exists — the API can be published in a catalogue/registry.
-- **Find:** still exists — a consumer can discover the service endpoint and contract.
-- **Bind:** still exists conceptually — the consumer uses the discovered endpoint and OpenAPI contract to make HTTP calls.
+## B1 — Content Negotiation and Compression
 
-What disappears is the need for a SOAP/UDDI-specific binding mechanism. HTTP URLs, HTTP methods, media types and the OpenAPI contract take over much of the job.
+JSON request bodies use:
 
-## 4. XML Schema vs manual validation
+`Content-Type: application/json`
 
-The responsibility is now carried by:
+Clients can request JSON using:
+
+`Accept: application/json`
+
+If the client requests an unsupported response type such as:
+
+`Accept: text/html`
+
+the service returns:
+
+`406 Not Acceptable`
+
+For large responses, the service supports gzip compression when the client sends:
+
+`Accept-Encoding: gzip`
+
+The response then includes:
+
+`Content-Encoding: gzip`
+
+and:
+
+`Vary: Accept-Encoding`
+
+---
+
+## B2 — Status Codes and Location
+
+The service uses the following status codes:
+
+| Status                     | Usage                                         |
+| -------------------------- | --------------------------------------------- |
+| `200 OK`                   | Successful GET or PUT                         |
+| `201 Created`              | Successful POST that creates a resource       |
+| `204 No Content`           | Successful OPTIONS response                   |
+| `304 Not Modified`         | Conditional GET when resource has not changed |
+| `400 Bad Request`          | Malformed or invalid request                  |
+| `401 Unauthorized`         | Missing or invalid Authorization header       |
+| `404 Not Found`            | Resource does not exist                       |
+| `406 Not Acceptable`       | Unsupported Accept type                       |
+| `409 Conflict`             | Duplicate menu item                           |
+| `412 Precondition Failed`  | If-Match ETag does not match                  |
+| `422 Unprocessable Entity` | Valid request rejected by a domain rule       |
+| `429 Too Many Requests`    | Rate limit exceeded                           |
+| `503 Service Unavailable`  | Required dependency unavailable               |
+
+When a menu item is created successfully, the response contains:
+
+`201 Created`
+
+and a `Location` header such as:
+
+`Location: /menu-items/2`
+
+---
+
+## B3 — Authorization
+
+Protected endpoints require:
+
+`Authorization: Bearer <token>`
+
+For example:
+
+```http
+Authorization: Bearer test-token
+```
+
+If the Authorization header is missing or contains an empty Bearer token, the service returns:
+
+`401 Unauthorized`
+
+No real authentication or token-generation system is implemented. The assignment only requires header-level handling.
+
+---
+
+## B4 — Cache-Control and ETag
+
+Single-item GET responses include:
+
+`Cache-Control: private, max-age=60`
+
+and an `ETag`.
+
+Example:
+
+```http
+ETag: "5d2458fe995cd6a0642720c64ee71358ef7ce63a0082b199503a7fbc4bfc58c4"
+```
+
+The ETag is generated from the current representation of the menu item.
+
+When the resource changes, its ETag changes.
+
+---
+
+## B5 — Rate Limiting
+
+The service sends:
+
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: <remaining>
+```
+
+The rate limit is maintained per client.
+
+When the limit is exceeded, the service returns:
+
+`429 Too Many Requests`
+
+and:
+
+```http
+Retry-After: 60
+```
+
+---
+
+## B6 — CORS
+
+The service supports CORS using:
+
+```http
+Access-Control-Allow-Origin: *
+```
+
+OPTIONS requests are used for CORS preflight.
+
+The preflight response includes:
+
+```http
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+```
+
+and the allowed request headers include:
+
+```http
+Content-Type
+Accept
+Authorization
+Idempotency-Key
+If-Match
+If-None-Match
+X-HTTP-Method-Override
+```
+
+---
+
+## B7 — Security Headers
+
+The service includes:
+
+```http
+X-Content-Type-Options: nosniff
+```
+
+and:
+
+```http
+Strict-Transport-Security: max-age=31536000
+```
+
+The Flask/Werkzeug framework also supplies standard headers such as:
+
+`Date`
+
+and:
+
+`Server`
+
+In production, HTTPS should be used so that Strict-Transport-Security has the intended effect.
+
+---
+
+# Part C — Conditional Requests and Safe Retries
+
+## C1 — If-None-Match
+
+The client can send the ETag received from an earlier GET:
+
+```http
+If-None-Match: "5d2458fe995cd6a0642720c64ee71358ef7ce63a0082b199503a7fbc4bfc58c4"
+```
+
+If the current ETag matches, the server returns:
 
 ```text
-validate_menu_item()
+HTTP/1.1 304 NOT MODIFIED
 ```
 
-and for the state-changing endpoint:
+No response body is returned.
+
+---
+
+## C2 — If-Match
+
+Updates require the client to provide:
+
+```http
+If-Match: "<current-etag>"
+```
+
+If the supplied ETag does not match the current resource ETag, the server returns:
 
 ```text
-validate_availability()
+HTTP/1.1 412 PRECONDITION FAILED
 ```
 
-For example, without validation a request missing `price` could get past the boundary and cause incorrect application behaviour instead of being rejected as a malformed request.
+This prevents one client from accidentally overwriting changes made by another client.
 
-## 5. When SOAP would still be preferred
+---
 
-I would still choose the SOAP stack for the external payment-partner edge when the partner requires a mature enterprise SOAP contract with message-level security and WS-* guarantees. The guarantee being bought is not merely “XML”; it is the standardized SOAP/WS-* ecosystem for features such as message-level security and reliable enterprise messaging semantics that can remain meaningful beyond a single HTTP hop.
+## C3 — Idempotency-Key
 
-# Curl transcript
+The create endpoint requires:
 
-The following commands produce the required evidence.
+```http
+Idempotency-Key: <unique-key>
+```
 
-Start the service:
+When the same key is sent again, the service returns the original result instead of creating another menu item.
+
+This protects against duplicate creation when a client retries after a timeout or uncertain network response.
+
+---
+
+## C4 — Safe-Retry Plan
+
+| Endpoint                             | Retry Mechanism                   | Reason                            |
+| ------------------------------------ | --------------------------------- | --------------------------------- |
+| `GET /menu-items`                    | Normal retry                      | GET is safe                       |
+| `GET /menu-items/{id}`               | `If-None-Match`                   | Avoids unnecessary response body  |
+| `POST /menu-items`                   | `Idempotency-Key`                 | Prevents duplicate creation       |
+| `PUT /menu-items/{id}`               | `If-Match`                        | Prevents lost updates             |
+| `POST /menu-items/{id}/availability` | Verify current state before retry | Avoids unintended repeated action |
+| Conditional GET                      | `If-None-Match`                   | Returns 304 if unchanged          |
+| Conditional PUT                      | `If-Match`                        | Returns 412 if resource changed   |
+
+---
+
+# Part D — Testing and Documentation
+
+## D1 — Curl Test Transcript
+
+### Test 1 — Create Resource
+
+Command:
 
 ```bash
-python3 app.py
+curl -v -X POST http://127.0.0.1:5000/menu-items \
+-H "Content-Type: application/json" \
+-H "Accept: application/json" \
+-H "Authorization: Bearer test-token" \
+-H "Idempotency-Key: D1-create-001" \
+-d '{"name":"Dosa","category":"South Indian","price":80,"available":true}'
 ```
 
-Successful create:
-
-```bash
-curl -i -X POST http://localhost:5000/menu-items \
-  -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: demo-123' \
-  -d '{"name":"Masala Dosa","category":"South Indian","price":80}'
-```
-
-Expected:
+Result:
 
 ```text
 HTTP/1.1 201 CREATED
-Location: /menu-items/1
+Location: /menu-items/3
 ```
 
-Repeat with the same key:
+Response body:
+
+```json
+{
+  "available": true,
+  "category": "South Indian",
+  "id": 3,
+  "name": "Dosa",
+  "price": 80.0
+}
+```
+
+---
+
+### Test 2 — Repeat Same Create Request
+
+The same request was repeated with the same:
+
+```http
+Idempotency-Key: D1-create-001
+```
+
+Result:
+
+```text
+HTTP/1.1 201 CREATED
+Location: /menu-items/3
+```
+
+The response returned the same menu item with ID `3`. No duplicate resource was created.
+
+---
+
+### Test 3 — Get Current ETag
+
+Command:
 
 ```bash
-curl -i -X POST http://localhost:5000/menu-items \
-  -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: demo-123' \
-  -d '{"name":"Masala Dosa","category":"South Indian","price":80}'
+curl -i http://127.0.0.1:5000/menu-items/3
 ```
 
-Expected: original `201` response and the same `Location`.
+Result:
 
-Malformed body:
+```text
+HTTP/1.1 200 OK
+ETag: "5d2458fe995cd6a0642720c64ee71358ef7ce63a0082b199503a7fbc4bfc58c4"
+Cache-Control: private, max-age=60
+```
+
+---
+
+### Test 4 — Conditional GET
+
+Command:
 
 ```bash
-curl -i -X POST http://localhost:5000/menu-items \
-  -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: bad-1' \
-  -d '{"name":"Dosa"}'
+curl -v http://127.0.0.1:5000/menu-items/3 \
+-H 'If-None-Match: "5d2458fe995cd6a0642720c64ee71358ef7ce63a0082b199503a7fbc4bfc58c4"'
 ```
 
-Expected: `400 BAD REQUEST`.
+Result:
 
-Missing resource:
+```text
+HTTP/1.1 304 NOT MODIFIED
+ETag: "5d2458fe995cd6a0642720c64ee71358ef7ce63a0082b199503a7fbc4bfc58c4"
+```
+
+No response body was returned.
+
+---
+
+### Test 5 — Conditional Write with Wrong ETag
+
+Command:
 
 ```bash
-curl -i http://localhost:5000/menu-items/999
+curl -i -X PUT http://127.0.0.1:5000/menu-items/3 \
+-H "Content-Type: application/json" \
+-H "Accept: application/json" \
+-H "Authorization: Bearer test-token" \
+-H 'If-Match: "wrong-etag-123"' \
+-d '{"name":"Dosa Updated","category":"South Indian","price":90,"available":true}'
 ```
 
-Expected: `404 NOT FOUND`.
+Result:
 
-State conflict:
+```text
+HTTP/1.1 412 PRECONDITION FAILED
+```
+
+The response contained the current ETag:
+
+```text
+ETag: "5d2458fe995cd6a0642720c64ee71358ef7ce63a0082b199503a7fbc4bfc58c4"
+```
+
+---
+
+### Test 6 — Bad Request
+
+Command:
 
 ```bash
-curl -i -X PATCH http://localhost:5000/menu-items/1/availability \
-  -H 'Content-Type: application/json' \
-  -d '{"available":true}'
+curl -i -X POST http://127.0.0.1:5000/menu-items \
+-H "Content-Type: application/json" \
+-H "Accept: application/json" \
+-H "Authorization: Bearer test-token" \
+-H "Idempotency-Key: D1-400-001" \
+-d '{"name":"Test","category":"Food","available":true}'
 ```
 
-If item 1 is already available, expected: `409 CONFLICT`.
+Result:
 
-# Final verification
+```text
+HTTP/1.1 400 BAD REQUEST
+```
 
-Run:
+Detail:
+
+```text
+Missing required field(s): price
+```
+
+---
+
+### Test 7 — Not Found
+
+Command:
 
 ```bash
-python3 -m pip install -r requirements.txt
-pytest -q
-openapi-spec-validator openapi.yaml
+curl -i http://127.0.0.1:5000/menu-items/9999
 ```
 
-Capture the terminal output for both validation and tests and include it with the submission.
+Result:
+
+```text
+HTTP/1.1 404 NOT FOUND
+```
+
+Detail:
+
+```text
+Menu item 9999 was not found.
+```
+
+---
+
+### Test 8 — Unauthorized
+
+Command:
+
+```bash
+curl -i -X POST http://127.0.0.1:5000/menu-items \
+-H "Content-Type: application/json" \
+-H "Accept: application/json" \
+-H "Idempotency-Key: D1-401-001" \
+-d '{"name":"Unauthorized Test","category":"Test","price":50,"available":true}'
+```
+
+Result:
+
+```text
+HTTP/1.1 401 UNAUTHORIZED
+```
+
+Detail:
+
+```text
+Authorization Bearer token is required.
+```
+
+---
+
+# D2 — Request and Response Headers Table
+
+| Endpoint                             | Request Headers                                                             | Response Headers                                                                                                                                                            |
+| ------------------------------------ | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /menu-items`                   | `Content-Type`, `Accept`, `Authorization`, `Idempotency-Key`                | `Content-Type`, `Location`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-Content-Type-Options`, `Strict-Transport-Security`, `Access-Control-Allow-Origin`              |
+| `GET /menu-items`                    | `Accept`                                                                    | `Content-Type`, `Cache-Control`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-Content-Type-Options`, `Strict-Transport-Security`, `Access-Control-Allow-Origin`         |
+| `GET /menu-items/{id}`               | `Accept`, `If-None-Match`                                                   | `Content-Type`, `ETag`, `Cache-Control`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-Content-Type-Options`, `Strict-Transport-Security`, `Access-Control-Allow-Origin` |
+| `PUT /menu-items/{id}`               | `Content-Type`, `Accept`, `Authorization`, `If-Match`                       | `Content-Type`, `ETag`, `Cache-Control`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-Content-Type-Options`, `Strict-Transport-Security`, `Access-Control-Allow-Origin` |
+| `POST /menu-items/{id}/availability` | `Content-Type`, `Accept`, `Authorization`                                   | `Content-Type`, `ETag`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-Content-Type-Options`, `Strict-Transport-Security`, `Access-Control-Allow-Origin`                  |
+| `OPTIONS /menu-items`                | `Origin`, `Access-Control-Request-Method`, `Access-Control-Request-Headers` | `Allow`, `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `X-Content-Type-Options`, `Strict-Transport-Security`               |
+
+---
+
+# D3 — Eight Answers
+
+## 1. Which HTTP methods are safe?
+
+GET and OPTIONS are safe because they do not modify the resource state.
+
+## 2. Which HTTP methods are idempotent?
+
+GET, PUT, and OPTIONS are idempotent according to HTTP semantics.
+
+POST is not inherently idempotent, but the create operation uses an Idempotency-Key to make retries safe against duplicate creation.
+
+## 3. Why is POST used for the availability action?
+
+Availability is treated as an action on an existing menu item, so the service uses:
+
+`POST /menu-items/{item_id}/availability`
+
+instead of placing an action verb directly in the URL.
+
+## 4. Why are filtering, sorting and pagination query parameters?
+
+They change how the collection is viewed without changing the collection itself, so they are represented as query parameters on a GET request.
+
+## 5. Why is 201 returned after creation?
+
+`201 Created` indicates that a new resource was successfully created. The Location header identifies the newly created resource.
+
+## 6. Why is 412 used with If-Match?
+
+`412 Precondition Failed` prevents lost updates. If the supplied ETag does not match the current resource ETag, the update is rejected.
+
+## 7. Why is Idempotency-Key important for POST?
+
+A network failure can occur after the server processes a POST but before the client receives the response. Retrying without protection could create a duplicate resource.
+
+The Idempotency-Key allows the server to recognize the repeated request and return the original result.
+
+## 8. Why is 304 returned for If-None-Match?
+
+`304 Not Modified` tells the client that the resource has not changed since the ETag it already has. Therefore, the server does not send the resource body again.
+
+---
+
+# Assignment 5 Completion Status
+
+* Part A — HTTP Methods: Completed
+* Part B — HTTP Headers and Status Codes: Completed
+* Part C — Conditional Requests and Safe Retries: Completed
+* Part D1 — Curl Testing: Completed
+* Part D2 — Headers Table: Completed
+* Part D3 — Eight Answers: Completed
+
+---
+
+# Team Information
+
+**Team ID:** __________________________
+
+**Roll No / Name:** __________________________
+
+**Service:** Catalogue
+
+### Team Members
+
+1. ---
+2. ---
+3. ---
+4. ---
+
+---
+
+# Submission Checklist
+
+* [ ] `openapi.yaml` updated
+* [ ] Source code updated
+* [ ] Tests completed
+* [ ] `NOTES.md` completed
+* [ ] D1 curl tests documented
+* [ ] D2 headers table added
+* [ ] D3 eight answers added
+* [ ] Team ID entered
+* [ ] All team members' roll numbers and names entered
+* [ ] Git changes committed
+* [ ] Changes pushed to the team branch/repository
+* [ ] Final repository link checked
+* [ ] ZIP prepared for submission

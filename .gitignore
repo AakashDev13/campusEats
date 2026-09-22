@@ -1,0 +1,7 @@
+
+# Python virtual environment
+Assignment4_CampusEats_Catalogue/venv/
+
+# Python cache
+Assignment4_CampusEats_Catalogue/__pycache__/
+*.pyc
