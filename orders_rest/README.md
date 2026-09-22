@@ -1,22 +1,52 @@
-# CampusEats Orders REST Service
+# CampusEats Orders REST Service — JavaScript
 
-Sibling service folder for the CampusEats REST assignment. The service implements Orders using resources, OpenAPI, HTTP status codes, a single problem error shape, idempotent order creation, and a hardened outbound Payments call.
+This is the JavaScript/Express conversion of the original Python Orders service.
 
-## Run
+## Requirements
 
-```bash
-export PAYMENTS_URL=http://localhost:9000
-python app.py
-```
+- Node.js 18+ (Node.js 20+ recommended)
+- npm
 
-## Tests
+## Install
 
 ```bash
-pytest -q
+npm install
 ```
 
-## Contract validation
+## Run a local mock Payments service
+
+Terminal 1:
 
 ```bash
-openapi-spec-validator openapi.yaml
+npm run mock-payment
 ```
+
+## Run Orders
+
+Terminal 2:
+
+```bash
+PAYMENTS_URL=http://127.0.0.1:9000 npm start
+```
+
+The API listens on:
+
+```text
+http://127.0.0.1:8000
+```
+
+## Test
+
+```bash
+npm test
+```
+
+## Assignment 5
+
+See:
+
+- `openapi.yaml`
+- `NOTES.md`
+- `curl-transcript.txt`
+
+The service implements the HTTP methods, headers, ETag conditional requests, idempotency, CORS, rate limiting, authorization header handling, method override, and status codes required by Assignment 5.

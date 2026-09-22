@@ -1,0 +1,19 @@
+{
+  "name": "campuseats-orders-rest",
+  "version": "2.0.0",
+  "private": true,
+  "description": "CampusEats Orders REST Service - Assignment 5",
+  "main": "app.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "syntax": "node --check app.js",
+    "mock-payment": "node mock_payment.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "js-yaml": "^4.1.0",
+    "method-override": "^3.0.0",
+    "compression": "^1.8.1"
+  }
+}

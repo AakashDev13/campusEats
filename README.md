@@ -1,49 +1,72 @@
-# Team Members
-
-- Aakash - 20252651001 (Leader)
-- sahil kumar - 20252651044
-- sonu jha - 20252651056
-- vedansh rahguwanshi - 20252651062
-- shanu singh - 20252651050
-
 # CampusEats
 
 CampusEats is a campus food ordering and management system.
 
-## Assignment
+## Team
 
-This project demonstrates:
+- Aakash — 20252651001 (Leader)
+- Sahil Kumar — 20252651044
+- Sonu Jha — 20252651056
+- Vedansh Raghuwanshi — 20252651062
+- Shanu Singh — 20252651050
 
-- Forming HTTP requests using curl
-- Reading HTTP responses
-- Inspecting network requests using browser DevTools
-- Setting up a Git repository
-- Identifying the main users, nouns, and verbs of the CampusEats system
+## Orders REST Service
 
-## Files
+The Orders service has been converted from the original Python implementation to **JavaScript with Node.js + Express** and extended for **CS 543 Web Services Assignment 5**.
 
-- `README.md` — Project overview
-- `http-log.md` — HTTP request/response experiments
-- `network-analysis.md` — Browser Network panel analysis
-- `brief.md` — CampusEats system brief
+The service demonstrates:
 
+- REST resource-oriented HTTP methods
+- POST sub-resources for non-CRUD actions
+- safe and idempotent operations
+- query filtering, sorting and pagination
+- OPTIONS + Allow
+- `X-HTTP-Method-Override`
+- JSON content negotiation
+- HTTP status codes
+- Bearer authorization header handling
+- ETag + Cache-Control
+- `If-None-Match` → 304
+- `If-Match` → 412
+- `Idempotency-Key`
+- per-client rate limiting
+- CORS and OPTIONS preflight
+- security headers
+- gzip compression for large JSON responses
+- hardened outbound Payments call with timeout and retry/backoff
+- automated tests
+- OpenAPI 3.0.3 contract
 
+## Run the service
 
-# CampusEats Orders REST Service
+```bash
+cd orders_rest
+npm install
+npm run mock-payment
+```
 
-Sibling service folder for the CampusEats REST assignment. The service implements Orders using resources, OpenAPI, HTTP status codes, a single problem error shape, idempotent order creation, and a hardened outbound Payments call.
+In another terminal:
 
+```bash
+cd orders_rest
+PAYMENTS_URL=http://127.0.0.1:9000 npm start
+```
 
+The Orders API is available at:
 
-## Run
+```text
+http://127.0.0.1:8000
+```
 
-export PAYMENTS_URL=http://localhost:9000
-python app.py
+## Test
 
-## Tests
+```bash
+cd orders_rest
+npm test
+```
 
-pytest -q
+## Syntax check
 
-## Contract validation
-
-openapi-spec-validator openapi.yaml
+```bash
+npm run syntax
+```
