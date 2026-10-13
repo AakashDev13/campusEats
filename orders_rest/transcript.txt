@@ -1,0 +1,97 @@
+CS 543 — CampusEats Assignment 5
+curl -v transcript
+================================
+
+Run these first in two terminals:
+
+Terminal 1:
+  cd orders_rest
+  npm run mock-payment
+
+Terminal 2:
+  cd orders_rest
+  PAYMENTS_URL=http://127.0.0.1:9000 npm start
+
+Use the actual output produced by curl -v below when submitting.
+The lines marked [CAPTURE] are placeholders for the real transcript.
+
+1) CREATE — 201 + Location
+---------------------------
+$ curl -v -X POST http://127.0.0.1:8000/orders \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json' \
+    -H 'Authorization: Bearer demo-token' \
+    -H 'Idempotency-Key: curl-create-001' \
+    -d '{"user_id":7,"items":[{"item_id":1,"name":"Thali","unit_price":80,"quantity":2}]}'
+
+[CAPTURE: paste complete curl -v request/response here]
+Expected: HTTP/1.1 201 Created
+Expected: Location: /orders/1
+
+2) IDEMPOTENT REPEAT — same Idempotency-Key
+--------------------------------------------
+Run exactly the same command again.
+
+[CAPTURE: paste complete curl -v request/response here]
+Expected: HTTP/1.1 201 Created
+Expected: Location: /orders/1
+Expected: same JSON body as first response
+
+3) CONDITIONAL GET — 304
+------------------------
+First:
+
+$ curl -v http://127.0.0.1:8000/orders/1 \
+    -H 'Accept: application/json' \
+    -H 'Authorization: Bearer demo-token'
+
+Copy the returned ETag, then run:
+
+$ curl -v http://127.0.0.1:8000/orders/1 \
+    -H 'Accept: application/json' \
+    -H 'Authorization: Bearer demo-token' \
+    -H 'If-None-Match: "PASTE_ETAG_HERE"'
+
+[CAPTURE: paste complete curl -v request/response here]
+Expected: HTTP/1.1 304 Not Modified
+
+4) CONDITIONAL WRITE — 412
+--------------------------
+$ curl -v -X PUT http://127.0.0.1:8000/orders/1 \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json' \
+    -H 'Authorization: Bearer demo-token' \
+    -H 'If-Match: "stale-etag"' \
+    -d '{"user_id":8,"items":[{"item_id":1,"name":"Thali","unit_price":80,"quantity":2}]}'
+
+[CAPTURE: paste complete curl -v request/response here]
+Expected: HTTP/1.1 412 Precondition Failed
+
+5) 400 — malformed/invalid request
+-----------------------------------
+$ curl -v -X POST http://127.0.0.1:8000/orders \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json' \
+    -H 'Authorization: Bearer demo-token' \
+    -H 'Idempotency-Key: curl-bad-001' \
+    -d '{"user_id":"seven","items":[]}'
+
+[CAPTURE: paste complete curl -v request/response here]
+Expected: HTTP/1.1 400 Bad Request
+
+6) 404 — missing resource
+--------------------------
+$ curl -v http://127.0.0.1:8000/orders/99999 \
+    -H 'Accept: application/json' \
+    -H 'Authorization: Bearer demo-token'
+
+[CAPTURE: paste complete curl -v request/response here]
+Expected: HTTP/1.1 404 Not Found
+
+7) 401 — missing Authorization
+------------------------------
+$ curl -v http://127.0.0.1:8000/orders \
+    -H 'Accept: application/json'
+
+[CAPTURE: paste complete curl -v request/response here]
+Expected: HTTP/1.1 401 Unauthorized

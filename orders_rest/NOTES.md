@@ -1,4 +1,4 @@
-# CS 543 — Web Services — Assignment 5
+# CS 543 — Web Services — Assignment 6
 ## CampusEats Orders REST Service — HTTP Methods & Headers
 
 **Team ID:** `<ENTER_TEAM_ID>`
@@ -726,6 +726,6 @@ This JavaScript version intentionally keeps the same in-process data-store appro
 - `errors.js` — common problem response
 - `payment_client.js` — hardened Payments HTTP client
 - `server.js` — server startup
-- `tests/orders.test.js` — Assignment 5 tests
+- `tests/orders.test.js` — Assignment 6 tests
 - `openapi.yaml` — updated contract
-- `NOTES.md` — Assignment 5 documentation
+- `NOTES.md` — Assignment 6 documentation
