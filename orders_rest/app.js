@@ -1,5 +1,4 @@
 const express = require("express");
-const express = require("mongo");
 const crypto = require("crypto");
 const methodOverride = require("method-override");
 
@@ -19,6 +18,10 @@ app.disable("x-powered-by");
 app.set("json spaces", 2);
 
 app.use(express.json({ limit: "1mb" }));
+app.use((req, res, next) => {
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  next();
+});
 
 // Assignment 5: documented fallback for clients that cannot send PUT/PATCH/DELETE.
 app.use(methodOverride("X-HTTP-Method-Override"));
@@ -114,36 +117,35 @@ function requireJsonContentType(req, res, next) {
 }
 
 function validateOrder(data) {
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return "Request body must be a JSON object";
-  }
-  if (!Number.isInteger(data.user_id)) {
-    return "user_id must be an integer";
-  }
+  const errors = [];
+  if (!data || typeof data !== "object" || Array.isArray(data))
+    return [{ field: "body", reason: "Request body must be a JSON object" }];
+  if (!Number.isInteger(data.user_id))
+    errors.push({ field: "user_id", reason: "user_id must be an integer" });
   const items = data.items;
   if (!Array.isArray(items) || items.length === 0) {
-    return "items must be a non-empty array";
+    errors.push({ field: "items", reason: "items must be a non-empty array" });
+  } else {
+    if (items.length > 20)
+      errors.push({ field: "items", reason: "The order cannot contain more than 20 items" });
+    items.forEach((item, i) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        errors.push({ field: `items[${i}]`, reason: "Each item must be an object" });
+        return;
+      }
+      if (!Number.isInteger(item.item_id))
+        errors.push({ field: `items[${i}].item_id`, reason: "item_id must be an integer" });
+      if (typeof item.name !== "string" || !item.name.trim())
+        errors.push({ field: `items[${i}].name`, reason: "item name is required" });
+      if (typeof item.unit_price !== "number" || !Number.isFinite(item.unit_price) || item.unit_price <= 0)
+        errors.push({ field: `items[${i}].unit_price`, reason: "unit_price must be positive" });
+      if (!Number.isInteger(item.quantity) || item.quantity < 1)
+        errors.push({ field: `items[${i}].quantity`, reason: "quantity must be an integer >= 1" });
+    });
   }
-  if (items.length > 20) {
-    return "The order cannot contain more than 20 items";
-  }
-
-  for (const item of items) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-      return "Each item must be an object";
-    }
-    if (!Number.isInteger(item.item_id)) return "item_id must be an integer";
-    if (typeof item.name !== "string" || !item.name.trim()) return "item name is required";
-    if (typeof item.unit_price !== "number" || !Number.isFinite(item.unit_price) || item.unit_price <= 0) {
-      return "unit_price must be positive";
-    }
-    if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
-      return "quantity must be a positive integer";
-    }
-  }
-  return null;
+  // Address is not present in the existing Assignment 5 test payload.
+  return errors;
 }
-
 function validatePatch(data) {
   if (!data || typeof data !== "object" || Array.isArray(data)) return "Request body must be a JSON object";
   if ("user_id" in data && !Number.isInteger(data.user_id)) return "user_id must be an integer";
@@ -235,8 +237,10 @@ app.get("/orders", requireJsonAccept, requireAuthorization, (req, res) => {
 
 // Collection: POST /orders
 app.post("/orders", requireJsonAccept, requireAuthorization, requireJsonContentType, async (req, res) => {
-  const error = validateOrder(req.body);
-  if (error) return res.status(400).json(problem(400, "Bad Request", error));
+  const errors = validateOrder(req.body);
+  if (errors.length) {
+    return res.status(400).json(problem(400, "Bad Request", errors.map(e => e.reason).join("; ")));
+  }
 
   const key = (req.get("Idempotency-Key") || "").trim();
   if (!key) return res.status(400).json(problem(400, "Bad Request", "Idempotency-Key header is required"));
@@ -312,8 +316,10 @@ app.put("/orders/:orderId", requireJsonAccept, requireAuthorization, requireJson
   if (!match) return res.status(412).json(problem(412, "Precondition Failed", "If-Match header is required"));
   if (match !== currentEtag) return res.status(412).json(problem(412, "Precondition Failed", "Resource ETag does not match"));
 
-  const error = validateOrder(req.body);
-  if (error) return res.status(400).json(problem(400, "Bad Request", error));
+  const errors = validateOrder(req.body);
+  if (errors.length) {
+    return res.status(400).json(problem(400, "Bad Request", errors.map(e => e.reason).join("; ")));
+  }
 
   // Preserve immutable creation timestamp and id; replace mutable representation.
   order.user_id = req.body.user_id;
