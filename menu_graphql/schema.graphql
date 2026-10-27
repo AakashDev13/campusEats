@@ -1,0 +1,25 @@
+# CampusEats - Menu service (a Dish is one row of the Catalogue's food items)
+
+type Dish {
+  id: ID!            # cannot be skipped - every dish has an id
+  name: String!      # cannot be skipped
+  price: Float!      # cannot be skipped
+  available: Boolean!
+}
+
+# Input type used by the mutation.
+# name and price are required (!); available is optional (defaults to true).
+input AddDishInput {
+  name: String!
+  price: Float!
+  available: Boolean
+}
+
+type Query {
+  dishes: [Dish!]!        # list all dishes
+  dish(id: ID!): Dish     # one dish by id (null when not found)
+}
+
+type Mutation {
+  addDish(input: AddDishInput!): Dish!
+}

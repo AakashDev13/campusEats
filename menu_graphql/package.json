@@ -1,0 +1,18 @@
+{
+  "name": "campuseats-menu-graphql",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CampusEats Menu (Dishes) service exposed through GraphQL - CS543 Assignment 7",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "db:setup": "mysql -u root -p < schema.sql"
+  },
+  "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "@as-integrations/express4": "^1.1.2",
+    "express": "^4.22.3",
+    "graphql": "^16.14.2",
+    "mysql2": "^3.24.6"
+  }
+}

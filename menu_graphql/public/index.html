@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CampusEats Menu (GraphQL)</title>
+  <link rel="icon" href="data:,">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, Arial, sans-serif; background: #f6f7f9; color: #1d2330; margin: 0; padding: 24px; }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    .sub { color: #5b6475; margin: 0 0 20px; }
+    .card { background: #fff; border: 1px solid #e2e5ea; border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+    h2 { margin: 0 0 12px; font-size: 17px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid #eceef2; }
+    th { color: #5b6475; font-size: 13px; font-weight: 600; }
+    .badge { padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .yes { background: #ddf5e4; color: #176b34; }
+    .no  { background: #fde3e1; color: #a02a22; }
+    form { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+    label { display: flex; flex-direction: column; font-size: 13px; color: #5b6475; gap: 4px; }
+    input[type=text], input[type=number] { padding: 8px 10px; border: 1px solid #c9cdd6; border-radius: 6px; font-size: 15px; }
+    input[type=text] { width: 220px; }
+    input[type=number] { width: 110px; }
+    button { padding: 9px 18px; border: 0; border-radius: 6px; background: #e8590c; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #cf4f0a; }
+    #msg { margin-top: 10px; min-height: 20px; font-size: 14px; }
+    .err { color: #a02a22; }
+    .ok  { color: #176b34; }
+    pre { background: #1d2330; color: #e6e9ef; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 13px; margin: 0; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CampusEats Menu</h1>
+  <p class="sub">Served through GraphQL &middot; <span id="count">0</span> dishes</p>
+
+  <div class="card">
+    <h2>Dishes</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Available</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="4">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Add a dish (mutation)</h2>
+    <form id="addForm">
+      <label>Name <input type="text" id="name" value="Paneer Roll" required></label>
+      <label>Price (&#8377;) <input type="number" id="price" value="90" min="0" step="0.01" required></label>
+      <button type="submit" id="addBtn">Add dish</button>
+    </form>
+    <div id="msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Last GraphQL request sent</h2>
+    <pre id="last">(none yet)</pre>
+  </div>
+</div>
+
+<script>
+  const ENDPOINT = "/graphql";
+
+  const LIST_QUERY = "query { dishes { id name price available } }";
+  const ADD_MUTATION = `mutation AddDish($input: AddDishInput!) {
+  addDish(input: $input) { id name price }
+}`;
+
+  // One helper that POSTs a GraphQL document with fetch().
+  async function gql(query, variables) {
+    document.getElementById("last").textContent =
+      query + (variables ? "\n\nvariables: " + JSON.stringify(variables) : "");
+    const res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables })
+    });
+    const body = await res.json();
+    if (body.errors) throw new Error(body.errors[0].message);
+    return body.data;
+  }
+
+  function showMessage(text, ok) {
+    const msg = document.getElementById("msg");
+    msg.textContent = text;
+    msg.className = ok ? "ok" : "err";
+  }
+
+  async function loadDishes() {
+    const tbody = document.getElementById("rows");
+    try {
+      const data = await gql(LIST_QUERY);
+      tbody.textContent = "";
+      for (const d of data.dishes) {
+        const tr = document.createElement("tr");
+        const cells = [d.id, d.name, "\u20B9" + Number(d.price).toFixed(2)];
+        for (const text of cells) {
+          const td = document.createElement("td");
+          td.textContent = text;           // textContent keeps user input safe
+          tr.appendChild(td);
+        }
+        const td = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = "badge " + (d.available ? "yes" : "no");
+        badge.textContent = d.available ? "Yes" : "No";
+        td.appendChild(badge);
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+      document.getElementById("count").textContent = data.dishes.length;
+    } catch (err) {
+      tbody.innerHTML = "";
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4; td.className = "err";
+      td.textContent = "Could not load dishes: " + err.message;
+      tr.appendChild(td); tbody.appendChild(tr);
+    }
+  }
+
+  document.getElementById("addForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = {
+      name: document.getElementById("name").value.trim(),
+      price: parseFloat(document.getElementById("price").value)
+    };
+    try {
+      const data = await gql(ADD_MUTATION, { input });
+      showMessage(`Added "${data.addDish.name}" with id ${data.addDish.id}`, true);
+      await loadDishes();
+      document.getElementById("last").textContent =
+        ADD_MUTATION + "\n\nvariables: " + JSON.stringify({ input });
+    } catch (err) {
+      showMessage("Failed: " + err.message, false);
+    }
+  });
+
+  loadDishes();
+</script>
+</body>
+</html>
