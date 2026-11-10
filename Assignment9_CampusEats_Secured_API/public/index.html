@@ -1,0 +1,396 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusEats | Secure Menu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo">🍽️ CampusEats</div>
+        <p>Fresh Food. Happy Campus.</p>
+    </header>
+
+    <main class="container">
+
+        <section class="welcome">
+            <h1>Our Menu</h1>
+            <p>Explore delicious food available on campus.</p>
+        </section>
+
+        <!-- Login Section -->
+        <section class="form-section" id="login-section">
+            <h2>🔐 User Login</h2>
+            <p>Login to access the secured CampusEats API.</p>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input
+                        type="email"
+                        id="email"
+                        placeholder="Enter your email"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="Enter your password"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    Login
+                </button>
+            </form>
+
+            <p id="login-message"></p>
+
+            <div class="demo-credentials">
+                <p><strong>Customer:</strong> student@campus.edu / student123</p>
+                <p><strong>Restaurant:</strong> restaurant@campus.edu / resto123</p>
+            </div>
+        </section>
+
+        <!-- User Information -->
+        <section class="form-section" id="user-section" hidden>
+            <h2>Welcome to CampusEats!</h2>
+            <p id="user-info"></p>
+            <button id="logout-btn" class="refresh-btn">
+                Logout
+            </button>
+        </section>
+
+        <!-- Menu Section -->
+        <section class="menu-section" id="menu-section" hidden>
+            <div class="section-heading">
+                <h2>Available Dishes</h2>
+                <button onclick="loadItems()" class="refresh-btn">
+                    ↻ Refresh Menu
+                </button>
+            </div>
+
+            <div id="menu-list" class="menu-grid">
+                <p>Loading menu...</p>
+            </div>
+        </section>
+
+        <!-- Add Dish Section -->
+        <section class="form-section" id="add-section" hidden>
+            <h2>➕ Add a New Dish</h2>
+            <p>Only restaurant users can add menu items.</p>
+
+            <form id="item-form">
+                <div class="form-group">
+                    <label for="name">Dish Name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        placeholder="Enter dish name"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Price (₹)</label>
+                    <input
+                        type="number"
+                        id="price"
+                        placeholder="Enter price"
+                        min="0"
+                        step="0.01"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    Add Dish
+                </button>
+            </form>
+
+            <p id="message"></p>
+        </section>
+
+        <p id="access-message"></p>
+
+    </main>
+
+    <footer>
+        <p>CS543 – Web Services | IIIT Vadodara</p>
+        <p>Assignment 9 – Securing the CampusEats API</p>
+    </footer>
+
+    <script>
+        const loginForm = document.getElementById("login-form");
+        const itemForm = document.getElementById("item-form");
+
+        const loginSection = document.getElementById("login-section");
+        const userSection = document.getElementById("user-section");
+        const menuSection = document.getElementById("menu-section");
+        const addSection = document.getElementById("add-section");
+
+        const menuList = document.getElementById("menu-list");
+        const loginMessage = document.getElementById("login-message");
+        const message = document.getElementById("message");
+
+        let token = localStorage.getItem("campuseats_token");
+        let currentUser = null;
+
+        // Login and generate JWT
+        loginForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+
+            try {
+                const response = await fetch("/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    loginMessage.textContent = result.error;
+                    loginMessage.className = "error";
+                    return;
+                }
+
+                token = result.token;
+                currentUser = result.user;
+
+                localStorage.setItem("campuseats_token", token);
+
+                loginMessage.textContent = "Login successful!";
+                loginMessage.className = "success";
+
+                loginForm.reset();
+
+                showDashboard();
+                await loadItems();
+
+            } catch (error) {
+                loginMessage.textContent = "Unable to connect to server.";
+                loginMessage.className = "error";
+            }
+        });
+
+        // Common authenticated API request
+        async function apiRequest(url, options = {}) {
+            return fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+        }
+
+        // Show dashboard based on user role
+        function showDashboard() {
+            loginSection.hidden = true;
+            userSection.hidden = false;
+            menuSection.hidden = false;
+
+            document.getElementById("user-info").textContent =
+                `Logged in as: ${currentUser.email} | Role: ${currentUser.role}`;
+
+            if (currentUser.role === "restaurant" ||
+                currentUser.role === "admin") {
+                addSection.hidden = false;
+                document.getElementById("access-message").textContent =
+                    "You have permission to manage menu items.";
+            } else {
+                addSection.hidden = true;
+                document.getElementById("access-message").textContent =
+                    "Customer access: You can view the menu only.";
+            }
+        }
+
+        // GET /items - Load menu using JWT
+        async function loadItems() {
+            menuList.innerHTML = "<p>Loading menu...</p>";
+
+            try {
+                const response = await apiRequest("/items");
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Unable to load menu");
+                }
+
+                const items = await response.json();
+
+                menuList.innerHTML = "";
+
+                if (items.length === 0) {
+                    menuList.textContent = "No dishes available.";
+                    return;
+                }
+
+                items.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "menu-card";
+
+                    const name = document.createElement("h3");
+                    name.textContent = item.name;
+
+                    const price = document.createElement("p");
+                    price.className = "price";
+                    price.textContent = `₹${item.price}`;
+
+                    const availability = document.createElement("span");
+                    availability.className = item.available
+                        ? "available"
+                        : "unavailable";
+
+                    availability.textContent = item.available
+                        ? "Available"
+                        : "Unavailable";
+
+                    const id = document.createElement("small");
+                    id.textContent = `Item ID: ${item.id}`;
+
+                    card.append(name, price, availability, id);
+                    menuList.appendChild(card);
+                });
+
+            } catch (error) {
+                menuList.textContent = "Failed to load menu.";
+            }
+        }
+
+        // POST /items - Add a new dish
+        itemForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            if (
+                currentUser.role !== "restaurant" &&
+                currentUser.role !== "admin"
+            ) {
+                message.textContent = "You are not allowed to add dishes.";
+                message.className = "error";
+                return;
+            }
+
+            const name = document.getElementById("name").value.trim();
+            const price = Number(document.getElementById("price").value);
+
+            try {
+                const response = await apiRequest("/items", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        name,
+                        price,
+                        available: true
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                if (!response.ok) {
+                    message.textContent = result.error;
+                    message.className = "error";
+                    return;
+                }
+
+                message.textContent =
+                    `${result.name} added successfully!`;
+
+                message.className = "success";
+
+                itemForm.reset();
+                await loadItems();
+
+            } catch (error) {
+                message.textContent = "Something went wrong.";
+                message.className = "error";
+            }
+        });
+
+        // Logout
+        function logout() {
+            localStorage.removeItem("campuseats_token");
+
+            token = null;
+            currentUser = null;
+
+            loginSection.hidden = false;
+            userSection.hidden = true;
+            menuSection.hidden = true;
+            addSection.hidden = true;
+
+            document.getElementById("access-message").textContent = "";
+            menuList.innerHTML = "";
+            message.textContent = "";
+            loginMessage.textContent = "";
+        }
+
+        document.getElementById("logout-btn").addEventListener(
+            "click", logout
+        );
+
+        // Restore existing login session
+        async function initializeApp() {
+            if (!token) return;
+
+            try {
+                const response = await apiRequest("/items");
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                if (!response.ok) {
+                    logout();
+                    return;
+                }
+
+                const payload = JSON.parse(atob(token.split(".")[1]));
+
+                currentUser = {
+                    id: payload.sub,
+                    role: payload.role,
+                    email: payload.role === "restaurant"
+                        ? "restaurant@campus.edu"
+                        : "student@campus.edu"
+                };
+
+                showDashboard();
+                await loadItems();
+
+            } catch (error) {
+                logout();
+            }
+        }
+
+        initializeApp();
+    </script>
+
+</body>
+</html>
