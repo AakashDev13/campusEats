@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusEats | Menu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo">🍽️ CampusEats</div>
+        <p>Fresh Food. Happy Campus.</p>
+    </header>
+
+    <main class="container">
+
+        <section class="welcome">
+            <h1>Our Menu</h1>
+            <p>Explore delicious food available on campus.</p>
+        </section>
+
+        <section class="menu-section">
+            <div class="section-heading">
+                <h2>Available Dishes</h2>
+                <button onclick="loadItems()" class="refresh-btn">
+                    ↻ Refresh Menu
+                </button>
+            </div>
+
+            <div id="menu-list" class="menu-grid">
+                <p>Loading menu...</p>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <h2>➕ Add a New Dish</h2>
+            <p>Add a new food item to the CampusEats menu.</p>
+
+            <form id="item-form">
+                <div class="form-group">
+                    <label for="name">Dish Name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        placeholder="Enter dish name"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Price (₹)</label>
+                    <input
+                        type="number"
+                        id="price"
+                        placeholder="Enter price"
+                        min="0"
+                        step="0.01"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    Add Dish
+                </button>
+            </form>
+
+            <p id="message"></p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>CS543 – Web Services | IIIT Vadodara</p>
+        <p>CampusEats REST API Assignment 8</p>
+    </footer>
+
+    <script>
+        const menuList = document.getElementById("menu-list");
+        const itemForm = document.getElementById("item-form");
+        const message = document.getElementById("message");
+
+        // GET /items - Load all menu items
+        async function loadItems() {
+            menuList.innerHTML = "<p>Loading menu...</p>";
+
+            try {
+                const response = await fetch("/items");
+
+                if (!response.ok) {
+                    throw new Error("Unable to load menu");
+                }
+
+                const items = await response.json();
+
+                menuList.innerHTML = "";
+
+                if (items.length === 0) {
+                    menuList.innerHTML = "<p>No dishes available.</p>";
+                    return;
+                }
+
+                items.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "menu-card";
+
+                    const name = document.createElement("h3");
+                    name.textContent = item.name;
+
+                    const price = document.createElement("p");
+                    price.className = "price";
+                    price.textContent = `₹${item.price}`;
+
+                    const availability = document.createElement("span");
+                    availability.className = item.available
+                        ? "available"
+                        : "unavailable";
+                    availability.textContent = item.available
+                        ? "Available"
+                        : "Unavailable";
+
+                    const id = document.createElement("small");
+                    id.textContent = `Item ID: ${item.id}`;
+
+                    card.append(name, price, availability, id);
+                    menuList.appendChild(card);
+                });
+
+            } catch (error) {
+                menuList.innerHTML = "<p>Failed to load menu.</p>";
+            }
+        }
+
+        // POST /items - Add a new dish
+        itemForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const name = document.getElementById("name").value.trim();
+            const price = document.getElementById("price").value;
+
+            try {
+                const response = await fetch("/items", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        price: Number(price),
+                        available: true
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    message.textContent = result.error;
+                    message.className = "error";
+                    return;
+                }
+
+                message.textContent = `${result.name} added successfully!`;
+                message.className = "success";
+
+                itemForm.reset();
+
+                // Refresh menu after successful creation
+                await loadItems();
+
+            } catch (error) {
+                message.textContent = "Something went wrong. Please try again.";
+                message.className = "error";
+            }
+        });
+
+        // Load menu when page opens
+        loadItems();
+    </script>
+
+</body>
+</html>
