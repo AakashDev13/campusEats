@@ -1,7 +1,7 @@
 # CampusEats – Secured REST API
 
 **Course:** CS543 – Web Services  
-**Assignment:** 9 of 12 – Securing CampusEats API  
+**Assignment:** 9 – Securing CampusEats API  
 **Technology:** Node.js, Express.js, JWT, bcryptjs
 
 ## 1. Project Overview
